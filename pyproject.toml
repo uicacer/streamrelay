@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "streamrelay"
+version = "0.1.0"
+description = "WebSocket relay for real-time token streaming from batch HPC executors"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [
+    { name = "Anas Nassar", email = "nassar@uic.edu" },
+]
+keywords = ["hpc", "globus-compute", "websocket", "streaming", "llm", "slurm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: System :: Distributed Computing",
+]
+dependencies = [
+    "websockets>=13.0",
+    "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+globus = [
+    "globus-compute-sdk>=2.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff",
+]
+
+[project.scripts]
+streamrelay = "streamrelay.server:main"
+
+[project.urls]
+Homepage = "https://github.com/Anas321/streamrelay"
+Repository = "https://github.com/Anas321/streamrelay"
+"Bug Tracker" = "https://github.com/Anas321/streamrelay/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["streamrelay"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
