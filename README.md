@@ -7,6 +7,10 @@
 [![Tests](https://github.com/uicacer/streamrelay/actions/workflows/tests.yml/badge.svg)](https://github.com/uicacer/streamrelay/actions)
 [![JOSS](https://joss.theoj.org/papers/TODO/status.svg)](https://joss.theoj.org/papers/TODO)
 
+**New here? Start with the [full tutorial](docs/tutorial.md)** — deploy the relay,
+write a producer on your HPC node, consume tokens in your app, add encryption.
+All in one place.
+
 ---
 
 ## The problem
