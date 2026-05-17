@@ -1,6 +1,6 @@
 # streamrelay
 
-**Real-time token streaming from batch HPC executors via WebSocket relay.**
+**Real-time incremental output from batch HPC executors via WebSocket relay.**
 
 [![PyPI](https://img.shields.io/pypi/v/streamrelay)](https://pypi.org/project/streamrelay/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/uicacer/streamrelay/blob/main/LICENSE)
@@ -8,16 +8,19 @@
 [![JOSS](https://joss.theoj.org/papers/TODO/status.svg)](https://joss.theoj.org/papers/TODO)
 
 **New here? Start with the [full tutorial](https://github.com/uicacer/streamrelay/blob/main/docs/tutorial.md)** — deploy the relay,
-write a producer on your HPC node, consume tokens in your app, add encryption.
+write a producer on your HPC node, stream output to your app, add encryption.
 All in one place.
 
 ---
 
 ## The problem
 
-HPC batch systems execute jobs to completion and return a single result. When that
-job is an LLM inference request, the user stares at a blank screen for the full
-generation time — often 15–20 seconds — before seeing any output.
+HPC batch systems execute jobs to completion and return a single result. Any job
+that produces output incrementally — LLM inference generating tokens, an iterative
+solver emitting convergence metrics, a simulation producing trajectory frames, a
+pipeline processing streaming data — is forced to wait until completion before
+sending anything back. The user (or downstream application) sees nothing until the
+job finishes.
 
 **streamrelay solves this with a dual-channel architecture:**
 
@@ -25,7 +28,7 @@ generation time — often 15–20 seconds — before seeing any output.
   job script, an SSH command, a Globus Compute function call — handles job
   submission and authentication exactly as before.
 - **Data plane** (streamrelay): a lightweight WebSocket relay through which the
-  compute node streams tokens back in real time as the GPU generates them.
+  compute node streams incremental output back in real time as it is produced.
 
 Both the compute node (producer) and your application (consumer) connect
 **outbound** to the relay. Neither side accepts an inbound connection — no firewall
@@ -35,15 +38,15 @@ exceptions, no VPN, no tunnels required.
 Your application              Relay server              HPC compute node
 ────────────────              ────────────              ────────────────
 1. Submit job via         2. Both connect               3. Job starts
-   SLURM / PBS /             outbound here              4. Tokens stream
+   SLURM / PBS /             outbound here              4. Output streams
    Globus Compute /          (this is streamrelay)         to relay →
    SSH / anything    ◄─────────────────────────────────────────────────
-5. Tokens arrive,
-   first one in < 1s
+5. Output arrives
+   incrementally
 ```
 
-Measured in the [STREAM system](https://github.com/uicacer/stream) at UIC:
-**0.85 s** median time-to-first-token from HPC with streaming, vs. **15.68 s**
+Measured in the [STREAM system](https://github.com/uicacer/stream) at UIC (LLM inference use case):
+**0.85 s** median time-to-first-output from HPC with streaming, vs. **15.68 s**
 in batch mode.
 
 ---

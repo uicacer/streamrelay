@@ -1,10 +1,14 @@
 """
-streamrelay — Real-time token streaming from batch HPC executors via WebSocket relay.
+streamrelay — Real-time incremental output from batch HPC executors via WebSocket relay.
 
 Solves a fundamental gap: HPC job schedulers (Globus Compute, SLURM, PBS) execute
 functions to completion and return a single result. This library adds a lightweight
-bidirectional channel so tokens stream out of the compute node in real time, with
+bidirectional channel so output streams out of the compute node in real time, with
 both ends connecting *outbound* to the relay (no inbound ports needed, no VPN).
+
+Works for any incrementally produced data: LLM tokens, simulation checkpoints,
+solver convergence metrics, processed records, sensor readings, or any JSON-
+serializable payload.
 
 Basic usage:
 
