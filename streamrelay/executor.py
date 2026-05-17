@@ -61,12 +61,6 @@ class StreamingExecutor:
     # Context manager
     # ------------------------------------------------------------------
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
     async def __aenter__(self):
         return self
 

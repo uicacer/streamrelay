@@ -42,9 +42,9 @@ dev = [
 streamrelay = "streamrelay.server:main"
 
 [project.urls]
-Homepage = "https://github.com/Anas321/streamrelay"
-Repository = "https://github.com/Anas321/streamrelay"
-"Bug Tracker" = "https://github.com/Anas321/streamrelay/issues"
+Homepage = "https://github.com/uicacer/streamrelay"
+Repository = "https://github.com/uicacer/streamrelay"
+"Bug Tracker" = "https://github.com/uicacer/streamrelay/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["streamrelay"]
