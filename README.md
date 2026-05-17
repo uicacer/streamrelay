@@ -346,6 +346,223 @@ When encryption is enabled, each message is wrapped before transmission:
 
 ---
 
+## API reference
+
+### `RelayProducer`
+
+Runs on the HPC compute node. Connects outbound to the relay and sends tokens.
+
+```python
+from streamrelay import RelayProducer
+
+# Synchronous — use inside SLURM jobs, PBS scripts, Globus Compute functions
+with RelayProducer(
+    relay_url,          # str: "wss://relay.example.com" or "ws://localhost:8765"
+    channel_id,         # str: uuid.uuid4() generated before submitting the job
+    relay_secret="",    # str: must match --secret on the relay server
+    encryption_key="",  # str: base64 AES-256 key from generate_key(); "" = no encryption
+) as relay:
+    relay.send_token("Hello")            # send one text chunk
+    relay.send_token(" world")
+    # send_done() called automatically when the with block exits normally
+    # send_error() called automatically if an exception is raised inside the block
+
+# Asynchronous — use when your code already runs in an asyncio event loop
+async with RelayProducer(relay_url, channel_id) as relay:
+    await relay._async_send_raw({"type": "token", "content": "Hello"})
+```
+
+**Explicit methods (when not using the context manager):**
+
+```python
+p = RelayProducer(relay_url, channel_id)
+p.connect()                              # open the synchronous WebSocket
+p.send_token("chunk")                   # send a token
+p.send_done(usage={"total_tokens": 50}) # signal completion with optional usage stats
+p.send_error("something broke")         # report an error (also sends done)
+p.close()                               # close the connection
+```
+
+---
+
+### `RelayConsumer`
+
+Runs on your application side. Connects outbound to the relay and yields tokens.
+
+```python
+from streamrelay import RelayConsumer
+
+consumer = RelayConsumer(
+    relay_url,          # str: same relay URL as the producer
+    channel_id,         # str: same channel_id passed to RelayProducer
+    relay_secret="",    # str: same secret as the producer
+    encryption_key="",  # str: same encryption key as the producer
+)
+
+# --- Synchronous iteration (CLI scripts, Jupyter notebooks) ---
+for token in consumer.stream():
+    print(token, end="", flush=True)
+
+# --- Asynchronous iteration (FastAPI, aiohttp, any asyncio application) ---
+async for token in consumer:            # uses __aiter__ → astream()
+    yield f"data: {token}\n\n"         # forward as Server-Sent Events
+
+# --- Collect the full response as a single string ---
+text = consumer.collect()               # blocking
+text = await consumer.acollect()        # async
+```
+
+**Connect the consumer before (or at the same time as) submitting the HPC job.**
+Any tokens that arrive before you connect are buffered by the relay (default 1,000
+messages) and flushed when you connect — you will not miss the beginning of the response.
+
+---
+
+### `start_relay` / `streamrelay` CLI
+
+Start the relay server — run this once on any machine with a public IP.
+
+```bash
+# CLI
+streamrelay --host 0.0.0.0 --port 8765 --secret MY_SECRET
+
+# All options:
+streamrelay --help
+#   --host HOST            bind address (default: 0.0.0.0)
+#   --port PORT            port to listen on (default: 8765)
+#   --secret SECRET        shared auth secret; also reads RELAY_SECRET env var
+#   --max-buffer N         max buffered messages per channel (default: 1000)
+#   --channel-timeout N    seconds before abandoned channels are reaped (default: 300)
+#   --log-level LEVEL      DEBUG / INFO / WARNING / ERROR (default: INFO)
+```
+
+```python
+# Python API — embed the relay inside an existing asyncio application
+import asyncio
+from streamrelay import start_relay
+
+asyncio.run(start_relay(
+    host="0.0.0.0",
+    port=8765,
+    secret="MY_SECRET",
+    max_buffer=1000,
+    channel_timeout=300,
+))
+```
+
+**Health check** — the relay exposes `/health` (no auth required):
+
+```python
+import asyncio, websockets, json
+
+async def check(relay_url):
+    async with websockets.connect(f"{relay_url}/health") as ws:
+        status = json.loads(await ws.recv())
+        print(status)  # {"status": "healthy", "active_channels": 0, "timestamp": "..."}
+
+asyncio.run(check("wss://relay.example.com"))
+```
+
+---
+
+### `generate_key`
+
+```python
+from streamrelay import generate_key
+
+key = generate_key()          # base64-encoded 32-byte AES-256 key
+print(key)                    # e.g. "xK3mP9vQ2rL8nJ6w..."
+# Store in .env as RELAY_ENCRYPTION_KEY=<key>
+# Pass the same key to both RelayProducer and RelayConsumer
+```
+
+Or from the shell:
+```bash
+python -c "from streamrelay import generate_key; print(generate_key())"
+```
+
+---
+
+### `StreamingExecutor` (Globus Compute)
+
+High-level wrapper for Globus Compute users. Handles channel ID generation,
+function submission with relay coordinates injected, and relay consumption.
+
+```python
+from streamrelay import StreamingExecutor
+
+async with StreamingExecutor(
+    endpoint_id="your-globus-endpoint-uuid",
+    relay_url="wss://relay.example.com",
+    relay_secret="MY_SECRET",
+    encryption_key="",          # optional AES-256 key
+    consumer_timeout=300.0,     # seconds to wait for first token
+) as executor:
+    async for token in executor.stream(my_inference_fn, prompt="Hello"):
+        print(token, end="", flush=True)
+```
+
+Your remote function automatically receives `relay_url`, `channel_id`, and
+optionally `relay_secret` / `encryption_key` as extra kwargs:
+
+```python
+def my_inference_fn(prompt, relay_url, channel_id, relay_secret="", encryption_key=""):
+    # All imports must be inline — Globus Compute serializes only the function body
+    from streamrelay import RelayProducer        # if streamrelay is installed on the endpoint
+    with RelayProducer(relay_url, channel_id, relay_secret=relay_secret) as relay:
+        for token in call_vllm_streaming(prompt):
+            relay.send_token(token)
+    return "ok"
+```
+
+If `streamrelay` is not installed on the endpoint workers, use the **inline producer
+pattern** from [docs/tutorial.md](docs/tutorial.md) (Pattern B / Pattern C) — it requires
+only `websockets` and `cryptography`, which are available on most HPC environments.
+
+---
+
+## Troubleshooting
+
+**Consumer hangs and never receives any tokens**
+
+1. Check the relay is reachable from both sides: `ws://your-relay:8765/health`
+2. Check the `channel_id` matches exactly between producer and consumer — a mismatch
+   means they connect to different channels and never find each other
+3. Check the `relay_secret` matches — a wrong secret is rejected at handshake with
+   WebSocket close code 4003; catch with `"4003" in str(e)`
+4. Check the producer actually ran — if the Globus job failed before connecting,
+   the consumer waits until the channel timeout (default 5 minutes)
+
+**`ConnectionRefusedError` or `ConnectionClosedError`**
+
+- Relay server is not running, or the URL/port is wrong
+- For `wss://` connections: the TLS certificate must be valid (use Caddy or Let's Encrypt)
+- For development: use `ws://` (unencrypted) with a local relay + Cloudflare tunnel for
+  the public URL
+
+**`InvalidTag` when decrypting**
+
+- The `encryption_key` does not match between producer and consumer — generate once and
+  store in both environments: `python -c "from streamrelay import generate_key; print(generate_key())"`
+
+**Tokens arrive out of order**
+
+- The relay forwards messages in arrival order — this should not happen
+- If using the buffering path (producer connects first), messages are flushed in FIFO order
+
+**`streamrelay` command not found after `pip install`**
+
+- The `streamrelay` CLI is installed into your Python environment's bin directory
+- Activate your virtual environment first, or use `python -m streamrelay.server`
+
+**`ModuleNotFoundError: No module named 'streamrelay'` on the HPC node**
+
+- The HPC endpoint workers may not have `streamrelay` installed
+- Use the **inline producer pattern** (no install needed): see Pattern B in
+  [docs/tutorial.md](docs/tutorial.md)
+
+---
+
 ## Documentation
 
 | Guide | What it covers |

@@ -10,15 +10,14 @@ Basic usage:
 
     # On the HPC compute node (producer)
     from streamrelay import RelayProducer
-    producer = RelayProducer(relay_url, channel_id, encryption_key)
-    for token in your_model_stream(prompt):
-        producer.send_token(token)
-    producer.send_done()
+    with RelayProducer(relay_url, channel_id) as relay:
+        for token in your_model_stream(prompt):
+            relay.send_token(token)
+    # "done" signal sent automatically on exit
 
     # On your client/middleware (consumer)
     from streamrelay import RelayConsumer
-    consumer = RelayConsumer(relay_url, channel_id, encryption_key)
-    for token in consumer.stream():
+    for token in RelayConsumer(relay_url, channel_id).stream():
         print(token, end="", flush=True)
 
     # High-level: submit a Globus Compute function and stream its output
