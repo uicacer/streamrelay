@@ -16,15 +16,11 @@ authors:
   - name: Steve Mohr
     orcid: 0009-0009-0455-8216
     affiliation: 1
-  - name: Lanre Adio
-    affiliation: 1
   - name: Leonard Apanasevich
     orcid: 0000-0002-5685-5871
     affiliation: 1
   - name: Himanshu Sharma
     orcid: 0000-0002-7498-8053
-    affiliation: 1
-  - name: Marius Horga
     affiliation: 1
 affiliations:
   - name: Advanced Cyberinfrastructure for Education and Research (ACER), University of Illinois Chicago, USA

@@ -360,8 +360,7 @@ If you use streamrelay in your research, please cite the JOSS paper:
 @article{nassar2026streamrelay,
   title   = {{streamrelay}: A {WebSocket} Relay for Real-Time Token Streaming
              from Batch {HPC} Executors},
-  author  = {Nassar, Anas and Mohr, Steve and Adio, Lanre and Apanasevich, Leonard
-             and Sharma, Himanshu and Horga, Marius},
+  author  = {Nassar, Anas and Mohr, Steve and Apanasevich, Leonard and Sharma, Himanshu},
   journal = {Journal of Open Source Software},
   year    = {2026},
   doi     = {10.21105/joss.TODO},
