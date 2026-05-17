@@ -342,14 +342,13 @@ When encryption is enabled, each message is wrapped before transmission:
 
 ---
 
-## Deployment
+## Documentation
 
-See [docs/deployment.md](docs/deployment.md) for:
-
-- Local development with Cloudflare Tunnel
-- Production on a cloud VM (Caddy + systemd service)
-- Docker Compose setup
-- Monitoring via the `/health` endpoint
+| Guide | What it covers |
+|-------|---------------|
+| [docs/tutorial.md](docs/tutorial.md) | **Start here.** Zero-to-streaming walkthrough: deploy relay, three producer patterns (pip install / inline / Globus Compute exec), consumer patterns, passing credentials to HPC jobs, E2E encryption, production checklist |
+| [docs/deployment.md](docs/deployment.md) | Relay server deployment: Cloudflare tunnel, VM + Caddy + systemd, Docker Compose, health monitoring |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Testing at three levels: unit tests, local end-to-end via Cloudflare, live relay test script |
 
 ---
 
