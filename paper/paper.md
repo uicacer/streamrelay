@@ -103,7 +103,7 @@ used standalone as a relay server, with no scheduler dependencies.
 - **Data plane**: `streamrelay` carries incremental output from the compute node
   to the application in real time, independently of when the job completes.
 
-![Dual-channel streaming architecture. The control plane (e.g., Globus Compute) handles task dispatch. The data plane (streamrelay relay server) carries incremental output in real time. Both the Task (HPC node) and the Application or Server connect outbound to the relay — no inbound ports required.](architecture.png){ width=70% }
+![Dual-channel streaming architecture. The control plane (e.g., Globus Compute) handles task dispatch. The data plane (streamrelay relay server) carries incremental output in real time. Both the Task (HPC node) and the Application or Server connect outbound to the relay — no inbound ports required.](architecture.png)
 
 The relay server maintains a **channel registry**. A channel is a matched pair of
 WebSocket connections identified by a UUID (122 bits of entropy, computationally
