@@ -3,11 +3,11 @@
 **Real-time token streaming from batch HPC executors via WebSocket relay.**
 
 [![PyPI](https://img.shields.io/pypi/v/streamrelay)](https://pypi.org/project/streamrelay/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/uicacer/streamrelay/blob/main/LICENSE)
 [![Tests](https://github.com/uicacer/streamrelay/actions/workflows/tests.yml/badge.svg)](https://github.com/uicacer/streamrelay/actions)
 [![JOSS](https://joss.theoj.org/papers/TODO/status.svg)](https://joss.theoj.org/papers/TODO)
 
-**New here? Start with the [full tutorial](docs/tutorial.md)** — deploy the relay,
+**New here? Start with the [full tutorial](https://github.com/uicacer/streamrelay/blob/main/docs/tutorial.md)** — deploy the relay,
 write a producer on your HPC node, consume tokens in your app, add encryption.
 All in one place.
 
@@ -240,7 +240,7 @@ any tampering in transit.
 
 Deploy the relay behind a TLS-terminating reverse proxy (Caddy, nginx) so all
 connections use `wss://` (WebSocket over TLS). This encrypts traffic between each
-client and the relay server. See [docs/deployment.md](docs/deployment.md) for a
+client and the relay server. See [docs/deployment.md](https://github.com/uicacer/streamrelay/blob/main/docs/deployment.md) for a
 Caddy setup with auto-provisioned Let's Encrypt certificates.
 
 ### Layer 2 — Access control (shared secret)
@@ -323,7 +323,7 @@ will receive ciphertext it cannot parse, but no silent data corruption occurs.
 | AES-256-GCM | Per-message encryption | Relay operator reading payloads | `encryption_key=` on producer + consumer |
 | UUID channel isolation | 122-bit random ID | Channel collision / guessing | Always on |
 
-See [docs/deployment.md](docs/deployment.md) for a production deployment guide
+See [docs/deployment.md](https://github.com/uicacer/streamrelay/blob/main/docs/deployment.md) for a production deployment guide
 (cloud VM + Caddy + systemd).
 
 ---
@@ -516,7 +516,7 @@ def my_inference_fn(prompt, relay_url, channel_id, relay_secret="", encryption_k
 ```
 
 If `streamrelay` is not installed on the endpoint workers, use the **inline producer
-pattern** from [docs/tutorial.md](docs/tutorial.md) (Pattern B / Pattern C) — it requires
+pattern** from [docs/tutorial.md](https://github.com/uicacer/streamrelay/blob/main/docs/tutorial.md) (Pattern B / Pattern C) — it requires
 only `websockets` and `cryptography`, which are available on most HPC environments.
 
 ---
@@ -559,7 +559,7 @@ only `websockets` and `cryptography`, which are available on most HPC environmen
 
 - The HPC endpoint workers may not have `streamrelay` installed
 - Use the **inline producer pattern** (no install needed): see Pattern B in
-  [docs/tutorial.md](docs/tutorial.md)
+  [docs/tutorial.md](https://github.com/uicacer/streamrelay/blob/main/docs/tutorial.md)
 
 ---
 
@@ -567,9 +567,9 @@ only `websockets` and `cryptography`, which are available on most HPC environmen
 
 | Guide | What it covers |
 |-------|---------------|
-| [docs/tutorial.md](docs/tutorial.md) | **Start here.** Zero-to-streaming walkthrough: deploy relay, three producer patterns (pip install / inline / Globus Compute exec), consumer patterns, passing credentials to HPC jobs, E2E encryption, production checklist |
-| [docs/deployment.md](docs/deployment.md) | Relay server deployment: Cloudflare tunnel, VM + Caddy + systemd, Docker Compose, health monitoring |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Testing at three levels: unit tests, local end-to-end via Cloudflare, live relay test script |
+| [docs/tutorial.md](https://github.com/uicacer/streamrelay/blob/main/docs/tutorial.md) | **Start here.** Zero-to-streaming walkthrough: deploy relay, three producer patterns (pip install / inline / Globus Compute exec), consumer patterns, passing credentials to HPC jobs, E2E encryption, production checklist |
+| [docs/deployment.md](https://github.com/uicacer/streamrelay/blob/main/docs/deployment.md) | Relay server deployment: Cloudflare tunnel, VM + Caddy + systemd, Docker Compose, health monitoring |
+| [CONTRIBUTING.md](https://github.com/uicacer/streamrelay/blob/main/CONTRIBUTING.md) | Testing at three levels: unit tests, local end-to-end via Cloudflare, live relay test script |
 
 ---
 
@@ -603,4 +603,4 @@ streamrelay was developed as part of the STREAM system:
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](https://github.com/uicacer/streamrelay/blob/main/LICENSE).
