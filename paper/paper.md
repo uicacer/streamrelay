@@ -138,6 +138,41 @@ link between each client and the relay; AES-256-GCM additionally protects the
 content from the relay operator itself, which is important for users sending
 sensitive data such as medical or financial information.
 
+## Security
+
+`streamrelay` enforces three independent security layers, each addressing a
+distinct threat:
+
+**Transport security (TLS).** When deployed behind a TLS-terminating reverse proxy
+(e.g., Caddy with auto-provisioned Let's Encrypt certificates), all connections use
+`wss://`. This encrypts traffic between each client and the relay and prevents
+network-level eavesdropping.
+
+**Access control (shared secret).** The relay can be started with a pre-shared
+secret (`--secret`). Every producer and consumer must supply the same value at the
+WebSocket handshake; connections without the correct secret are rejected before any
+channel state is created. This prevents unauthorized parties from connecting to or
+eavesdropping on channels. In addition, each channel uses a randomly generated UUID
+(122 bits of entropy) — even knowing the relay address, guessing a valid channel ID
+is computationally infeasible. The relay holds no persistent state: all channel
+information is discarded once both sides disconnect, and no OAuth2 credentials or
+user identity information traverse the relay.
+
+The shared secret is delivered to the HPC compute node as a job argument or
+environment variable — the same mechanism used to pass other job parameters in
+SLURM, PBS, or Globus Compute workflows. No changes to cluster authentication
+infrastructure are required.
+
+**End-to-end payload encryption (AES-256-GCM).** TLS protects the link to the
+relay, but the relay operator can still see plaintext token payloads. For sensitive
+workloads, `streamrelay` provides optional AES-256-GCM payload encryption
+[@nist_gcm]: the producer encrypts each message with a fresh 12-byte random nonce
+before sending it to the relay, the relay forwards the opaque ciphertext unchanged,
+and the consumer decrypts after receiving. The GCM authentication tag detects
+tampering in transit. The result is that the relay operator sees only ciphertext
+and cannot reconstruct any token payload. Encryption is opt-in and
+backward-compatible.
+
 ## Globus Compute integration
 
 An optional `StreamingExecutor` class (`pip install streamrelay[globus]`) provides

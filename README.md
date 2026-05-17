@@ -230,12 +230,94 @@ any tampering in transit.
 
 ## Security model
 
-| Layer | Mechanism | How to enable |
-|-------|-----------|---------------|
-| Transport encryption | TLS (`wss://`) via reverse proxy | Deploy relay behind Caddy or nginx |
-| Access control | Shared secret at WebSocket handshake | `--secret` flag on server |
-| Payload privacy | AES-256-GCM end-to-end encryption | `encryption_key=` on producer + consumer |
-| Channel isolation | Random UUID per request (122 bits entropy) | Always on |
+`streamrelay` enforces three independent security layers:
+
+### Layer 1 — Transport encryption (TLS)
+
+Deploy the relay behind a TLS-terminating reverse proxy (Caddy, nginx) so all
+connections use `wss://` (WebSocket over TLS). This encrypts traffic between each
+client and the relay server. See [docs/deployment.md](docs/deployment.md) for a
+Caddy setup with auto-provisioned Let's Encrypt certificates.
+
+### Layer 2 — Access control (shared secret)
+
+Start the relay with `--secret MY_SECRET`. Every producer and consumer must supply
+the same value as a query parameter (`?secret=MY_SECRET`). Connections without the
+correct secret are rejected at the WebSocket handshake before any channel state is
+created.
+
+```bash
+# Server
+streamrelay --port 8765 --secret MY_SECRET
+
+# Producer (HPC node) — same secret
+with RelayProducer(relay_url, channel_id, relay_secret="MY_SECRET") as relay: ...
+
+# Consumer (your app) — same secret
+RelayConsumer(relay_url, channel_id, relay_secret="MY_SECRET").stream()
+```
+
+**How to share the secret with the HPC node:** pass it as a job argument, an
+environment variable in your SLURM/PBS script, or as a keyword argument to your
+Globus Compute function. It does not need to be embedded in code:
+
+```bash
+# SLURM — pass via --export
+sbatch --export=ALL,RELAY_URL=wss://...,RELAY_SECRET=MY_SECRET job.sh
+
+# Globus Compute — inject as a kwarg
+executor.submit(my_fn, relay_url=relay_url, relay_secret=MY_SECRET, ...)
+```
+
+In addition to the shared secret, each request uses a **unique UUID channel ID**
+(122 bits of entropy). Even if an attacker knows the relay address, guessing a valid
+channel ID is computationally infeasible. The relay holds no persistent state —
+all channel state is discarded once both sides disconnect. No OAuth2 credentials or
+user identity information traverse the relay at any point.
+
+### Layer 3 — End-to-end payload encryption (AES-256-GCM)
+
+TLS protects the link to the relay, but the relay operator can still see plaintext
+token payloads. For sensitive workloads (medical, financial, or personal data),
+enable AES-256-GCM end-to-end encryption. The relay then forwards opaque ciphertext
+and cannot read the content.
+
+**Generate a key once** and store it securely (e.g., in your `.env`):
+
+```bash
+python -c "from streamrelay import generate_key; print(generate_key())"
+# Outputs a base64-encoded 32-byte key, e.g.: xK3mP9vQ2rL...
+```
+
+**Pass the same key to both producer and consumer:**
+
+```python
+KEY = os.getenv("RELAY_ENCRYPTION_KEY")
+
+# Producer (HPC node)
+with RelayProducer(relay_url, channel_id, encryption_key=KEY) as relay:
+    relay.send_token(token)
+
+# Consumer (your app)
+for token in RelayConsumer(relay_url, channel_id, encryption_key=KEY).stream():
+    print(token, end="", flush=True)
+```
+
+Each message is encrypted with a **fresh random 12-byte nonce** (per NIST SP
+800-38D). The GCM authentication tag detects any tampering in transit — if the relay
+or any intermediary modifies a message, decryption raises an `InvalidTag` exception
+rather than silently returning corrupted data. Encryption is opt-in and
+backward-compatible: an unencrypted consumer connecting to an encrypted producer
+will receive ciphertext it cannot parse, but no silent data corruption occurs.
+
+### Summary
+
+| Layer | Mechanism | Protects against | How to enable |
+|-------|-----------|-----------------|---------------|
+| TLS (`wss://`) | Reverse proxy (Caddy) | Network eavesdropping | Deploy behind Caddy/nginx |
+| Shared secret | WebSocket handshake | Unauthorized connections | `--secret` flag on server |
+| AES-256-GCM | Per-message encryption | Relay operator reading payloads | `encryption_key=` on producer + consumer |
+| UUID channel isolation | 122-bit random ID | Channel collision / guessing | Always on |
 
 See [docs/deployment.md](docs/deployment.md) for a production deployment guide
 (cloud VM + Caddy + systemd).
