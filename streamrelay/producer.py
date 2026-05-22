@@ -104,11 +104,8 @@ class RelayProducer:
     # -----------------------------------------------------------------------
 
     def _produce_url(self) -> str:
-        """Build the /produce/{channel_id} URL, appending ?secret= if needed."""
-        url = f"{self.relay_url}/produce/{self.channel_id}"
-        if self.relay_secret:
-            url += f"?secret={self.relay_secret}"
-        return url
+        """Build the /produce/{channel_id} URL."""
+        return f"{self.relay_url}/produce/{self.channel_id}"
 
     def _encode(self, payload: dict) -> str:
         """
@@ -136,6 +133,8 @@ class RelayProducer:
         """
         from websockets.sync.client import connect as ws_connect
         self._ws = ws_connect(self._produce_url())
+        if self.relay_secret:
+            self._ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
         logger.debug(f"[streamrelay] producer connected: channel={self.channel_id[:8]}")
         return self
 
@@ -169,6 +168,8 @@ class RelayProducer:
         Only needed if not using the context manager."""
         from websockets.sync.client import connect as ws_connect
         self._ws = ws_connect(self._produce_url())
+        if self.relay_secret:
+            self._ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
         logger.debug(f"[streamrelay] producer connected: channel={self.channel_id[:8]}")
 
     def close(self):
@@ -238,6 +239,8 @@ class RelayProducer:
         from websockets.asyncio.client import connect as ws_connect
         self._ws_cm = ws_connect(self._produce_url())
         self._ws = await self._ws_cm.__aenter__()
+        if self.relay_secret:
+            await self._ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
         logger.debug(f"[streamrelay] async producer connected: channel={self.channel_id[:8]}")
         return self
 

@@ -69,9 +69,20 @@ consumer arrives.
 
 URL SCHEME
 ==========
-  /produce/{channel_id}[?secret=<token>]   — register as producer
-  /consume/{channel_id}[?secret=<token>]   — register as consumer
-  /health                                  — health check (no auth required)
+  /produce/{channel_id}   — register as producer
+  /consume/{channel_id}   — register as consumer
+  /health                 — health check (no auth required)
+
+AUTH PROTOCOL
+=============
+When a shared secret is configured, the client sends it as the FIRST JSON
+message after the WebSocket handshake (not as a URL query parameter):
+
+  {"type": "auth", "secret": "<value>"}
+
+URL query parameters (?secret=) are logged by reverse proxies even over
+wss://, so they must not carry secrets. Post-handshake auth keeps the
+secret out of all log files.
 
 USAGE
 =====
@@ -109,10 +120,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Shared secret for authenticating producers and consumers.
-# When non-empty, every /produce and /consume connection must supply
-# ?secret=<value> in the URL. Connections without the correct secret are
-# rejected before any channel state is created.
+# When non-empty, every /produce and /consume connection must send
+# {"type": "auth", "secret": "<value>"} as the first WebSocket message.
+# Connections that fail to authenticate within 10 seconds are rejected.
 _RELAY_SECRET: str = ""
+
+# Seconds to wait for the auth message after WebSocket handshake.
+_AUTH_TIMEOUT_SECONDS: float = 10.0
 
 # Maximum number of messages to buffer per channel when the consumer has not
 # yet connected. Prevents a runaway producer from filling all available RAM.
@@ -232,19 +246,40 @@ async def handle_connection(websocket):
     # ------------------------------------------------------------------
     # Shared-secret authentication
     # ------------------------------------------------------------------
-    # When _RELAY_SECRET is configured, every produce/consume connection
-    # must supply ?secret=<value> in the URL query string. This prevents
-    # unauthorized parties from connecting to or eavesdropping on channels
-    # even if they know or guess a channel_id.
+    # Auth is transmitted as the FIRST JSON message after the WebSocket
+    # handshake: {"type": "auth", "secret": "<value>"}
+    # URL query parameters (?secret=) are intentionally NOT used because
+    # they appear in HTTP access logs even over wss://, leaking the secret.
+    #
+    # Legacy fallback: if the secret was passed as ?secret= in the URL,
+    # accept it with a deprecation warning so old clients keep working.
     if _RELAY_SECRET:
+        # Check legacy URL param first (backwards compat)
         qs = parse_qs(parsed.query)
-        provided = qs.get("secret", [None])[0]
-        if provided != _RELAY_SECRET:
+        legacy_secret = qs.get("secret", [None])[0]
+        if legacy_secret == _RELAY_SECRET:
             logger.warning(
-                f"[{channel_id[:8]}] rejected {role}r: invalid or missing secret"
+                f"[{channel_id[:8]}] DEPRECATED: secret passed as URL query param "
+                f"(?secret=). Switch to sending {{\"type\":\"auth\",\"secret\":\"...\"}} "
+                f"as the first WebSocket message. URL params appear in server logs."
             )
-            await websocket.close(4003, "Forbidden: invalid or missing secret")
-            return
+        else:
+            # Expect auth as first message within timeout
+            try:
+                raw_auth = await asyncio.wait_for(
+                    websocket.recv(), timeout=_AUTH_TIMEOUT_SECONDS
+                )
+                auth_msg = json.loads(raw_auth)
+                provided = auth_msg.get("secret") if auth_msg.get("type") == "auth" else None
+            except (asyncio.TimeoutError, json.JSONDecodeError, Exception):
+                provided = None
+
+            if provided != _RELAY_SECRET:
+                logger.warning(
+                    f"[{channel_id[:8]}] rejected {role}r: invalid or missing secret"
+                )
+                await websocket.close(4003, "Forbidden: invalid or missing secret")
+                return
 
     logger.info(f"[{channel_id[:8]}] {role}r connected")
 
@@ -426,7 +461,8 @@ async def start_relay(
             interfaces. Use "127.0.0.1" to restrict to localhost only.
         port: TCP port to listen on. Default 8765.
         secret: Shared secret for authentication. When non-empty, all
-            /produce and /consume connections must supply ?secret=<value>.
+            /produce and /consume connections must send
+            {"type": "auth", "secret": "<value>"} as their first message.
             Leave empty only for local development.
         max_buffer: Maximum number of messages to buffer per channel when
             the consumer has not yet connected. Oldest messages are dropped
@@ -488,8 +524,8 @@ def main():
         "--secret", default="",
         help=(
             "Shared secret for authentication. All produce/consume connections "
-            "must supply ?secret=<value>. Also reads RELAY_SECRET env var. "
-            "Omit only for local development."
+            "must send {\"type\":\"auth\",\"secret\":\"...\"} as their first message. "
+            "Also reads RELAY_SECRET env var. Omit only for local development."
         ),
     )
     parser.add_argument(

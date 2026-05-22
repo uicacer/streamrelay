@@ -86,11 +86,8 @@ class RelayConsumer:
     # -----------------------------------------------------------------------
 
     def _consume_url(self) -> str:
-        """Build the /consume/{channel_id} URL, appending ?secret= if needed."""
-        url = f"{self.relay_url}/consume/{self.channel_id}"
-        if self.relay_secret:
-            url += f"?secret={self.relay_secret}"
-        return url
+        """Build the /consume/{channel_id} URL."""
+        return f"{self.relay_url}/consume/{self.channel_id}"
 
     def _decrypt(self, msg_str: str) -> str:
         """
@@ -157,6 +154,8 @@ class RelayConsumer:
         logger.debug(f"[streamrelay] consumer connecting: channel={self.channel_id[:8]}")
 
         with ws_connect(url) as ws:
+            if self.relay_secret:
+                ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
             for raw in ws:
                 # Each raw message from the relay is one JSON string.
                 action, value = self._parse_and_yield(raw)
@@ -211,6 +210,8 @@ class RelayConsumer:
         logger.debug(f"[streamrelay] async consumer connecting: channel={self.channel_id[:8]}")
 
         async with ws_connect(url) as ws:
+            if self.relay_secret:
+                await ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
             async for raw in ws:
                 action, value = self._parse_and_yield(raw)
                 if action == "token":
