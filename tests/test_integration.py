@@ -6,7 +6,6 @@ through it to verify the full pipeline including encryption and buffering.
 """
 
 import asyncio
-import base64
 import os
 import uuid
 
@@ -80,7 +79,7 @@ async def test_buffering_producer_first():
 
 
 async def test_encrypted():
-    key = base64.b64encode(os.urandom(32)).decode()
+    key = os.urandom(32).hex()
     tokens = ["secret", " ", "data"]
     assert await _run(tokens, key=key) == tokens
 

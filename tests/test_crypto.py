@@ -1,6 +1,5 @@
 """Tests for AES-256-GCM encryption in streamrelay.crypto."""
 
-import base64
 import json
 import os
 
@@ -10,7 +9,7 @@ from streamrelay.crypto import decrypt_message, encrypt_message, generate_key
 
 
 def make_key() -> str:
-    return base64.b64encode(os.urandom(32)).decode()
+    return os.urandom(32).hex()
 
 
 def test_round_trip():
@@ -51,4 +50,4 @@ def test_wrong_key_raises():
 
 def test_generate_key_length():
     key = generate_key()
-    assert len(base64.b64decode(key)) == 32
+    assert len(bytes.fromhex(key)) == 32
