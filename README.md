@@ -249,9 +249,9 @@ Caddy setup with auto-provisioned Let's Encrypt certificates.
 ### Layer 2 — Access control (shared secret)
 
 Start the relay with `--secret MY_SECRET`. Every producer and consumer must supply
-the same value as a query parameter (`?secret=MY_SECRET`). Connections without the
-correct secret are rejected at the WebSocket handshake before any channel state is
-created.
+the same value as the **first JSON message** sent after the WebSocket handshake
+completes. Connections that do not supply a valid auth message within 10 seconds are
+rejected with close code 4003.
 
 ```bash
 # Server
@@ -264,9 +264,15 @@ with RelayProducer(relay_url, channel_id, relay_secret="MY_SECRET") as relay: ..
 RelayConsumer(relay_url, channel_id, relay_secret="MY_SECRET").stream()
 ```
 
+The secret is transmitted as application-layer data after the handshake, not as a
+URL query parameter. This is important: query parameters such as `?secret=...` appear
+in HTTP access logs (even over `wss://`) because the HTTP Upgrade request path is
+logged before TLS is applied. Post-handshake transmission keeps the secret out of
+all log files.
+
 **How to share the secret with the HPC node:** pass it as a job argument, an
 environment variable in your SLURM/PBS script, or as a keyword argument to your
-Globus Compute function. It does not need to be embedded in code:
+Globus Compute function:
 
 ```bash
 # SLURM — pass via --export

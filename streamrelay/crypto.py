@@ -50,10 +50,11 @@ Generate a key once and share it between the producer and consumer via
 environment variables or a secrets manager:
 
   python -c "from streamrelay import generate_key; print(generate_key())"
-  # Outputs something like: xK3mP9vQ...  (44 characters, base64-encoded)
+  # Outputs 64 hex characters, e.g.: 10f203a90e9f55549169c6af...
+  # Hex is used (not base64) to avoid +/= characters that break shell exports and .env files.
 
 Store it in your .env file:
-  RELAY_ENCRYPTION_KEY=xK3mP9vQ...
+  RELAY_ENCRYPTION_KEY=10f203a90e9f55549169c6af...
 
 Then pass it to both sides:
   RelayProducer(relay_url, channel_id, encryption_key=os.getenv("RELAY_ENCRYPTION_KEY"))
@@ -75,12 +76,15 @@ def generate_key() -> str:
     """
     Generate a random AES-256 encryption key.
 
-    Returns a base64-encoded string suitable for storing in a .env file or
-    passing as an environment variable. Run this once per deployment and
-    keep the key secret.
+    Returns a hex-encoded string (64 characters, 0-9 and a-f only) suitable for
+    storing in a .env file or passing as an environment variable without quoting.
+    Hex is used rather than base64 to avoid the +, /, and = characters that cause
+    problems in shell variable exports, YAML worker_init blocks, and some .env parsers.
+
+    Run this once per deployment and keep the key secret.
 
     Returns:
-        str: Base64-encoded 32-byte (256-bit) key, e.g. ``"xK3mP9vQ..."``
+        str: Hex-encoded 32-byte (256-bit) key, e.g. ``"10f203a90e9f5554..."``
 
     Example::
 
@@ -88,12 +92,12 @@ def generate_key() -> str:
         key = generate_key()
         print(key)   # store this in your .env as RELAY_ENCRYPTION_KEY
     """
-    return base64.b64encode(os.urandom(32)).decode()
+    return os.urandom(32).hex()
     # os.urandom(32): 32 cryptographically random bytes from the OS entropy pool
-    # base64.b64encode: converts raw bytes to a printable ASCII string
+    # .hex(): converts raw bytes to a 64-character lowercase hex string
 
 
-def encrypt_message(key_b64: str, plaintext_json: str) -> str:
+def encrypt_message(key_hex: str, plaintext_json: str) -> str:
     """
     Encrypt a JSON string and return the relay wire format.
 
@@ -105,13 +109,13 @@ def encrypt_message(key_b64: str, plaintext_json: str) -> str:
     to recover the original plaintext.
 
     Args:
-        key_b64: Base64-encoded 32-byte AES-256 key (from generate_key()).
+        key_hex: Hex-encoded 32-byte AES-256 key (from generate_key()).
         plaintext_json: Any JSON string to encrypt.
 
     Returns:
         str: JSON string ``{"type": "enc", "d": "<base64(nonce+ciphertext+tag)>"}``
     """
-    key = base64.b64decode(key_b64)         # decode base64 key → 32 raw bytes
+    key = bytes.fromhex(key_hex)             # decode hex key → 32 raw bytes
     nonce = os.urandom(_NONCE_SIZE)          # fresh random nonce for every message
 
     aesgcm = AESGCM(key)
@@ -125,7 +129,7 @@ def encrypt_message(key_b64: str, plaintext_json: str) -> str:
     return json.dumps({"type": "enc", "d": blob})
 
 
-def decrypt_message(key_b64: str, msg_str: str) -> str:
+def decrypt_message(key_hex: str, msg_str: str) -> str:
     """
     Decrypt a relay message, or pass through if it is not encrypted.
 
@@ -134,7 +138,7 @@ def decrypt_message(key_b64: str, msg_str: str) -> str:
     (backward-compatible passthrough for unencrypted messages).
 
     Args:
-        key_b64: Base64-encoded 32-byte AES-256 key (must match the producer's key).
+        key_hex: Hex-encoded 32-byte AES-256 key (must match the producer's key).
         msg_str: JSON string received from the relay.
 
     Returns:
@@ -160,7 +164,7 @@ def decrypt_message(key_b64: str, msg_str: str) -> str:
     nonce = blob[:_NONCE_SIZE]
     ciphertext_with_tag = blob[_NONCE_SIZE:]
 
-    key = base64.b64decode(key_b64)
+    key = bytes.fromhex(key_hex)
     aesgcm = AESGCM(key)
 
     # aesgcm.decrypt() verifies the GCM authentication tag before decrypting.
