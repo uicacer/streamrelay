@@ -440,4 +440,17 @@ of Advanced Platforms for Research, ACER) for his support of this work. We also
 thank the UIC ACER team for providing and maintaining the Lakeshore HPC cluster
 used in development and evaluation.
 
+# AI Usage Disclosure
+
+Claude Code (Anthropic, claude-sonnet-4-6) was used to assist with: code
+generation and refactoring (relay server, producer/consumer clients, encryption
+module, test scaffolding), documentation drafting (README, deployment guide,
+CONTRIBUTING), and paper text editing. All architectural decisions — the
+dual-channel control/data plane separation, post-handshake authentication
+protocol, AES-256-GCM encryption design, buffer/orphan-reaper logic, and
+HPC-as-API deployment pattern — are the authors' original work. All AI-assisted
+outputs were reviewed, validated, and revised by the authors. The authors take
+full responsibility for the accuracy, correctness, and integrity of all submitted
+materials.
+
 # References
