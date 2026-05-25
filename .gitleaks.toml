@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+# Allowlist for documentation and source files containing example/placeholder keys.
+# These are not real credentials — they are illustrative values in docs and tests.
+[[allowlists]]
+description = "Example keys in documentation and source examples"
+paths = [
+    "streamrelay/crypto.py",
+    "README.md",
+]
