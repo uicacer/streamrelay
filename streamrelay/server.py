@@ -443,7 +443,7 @@ def _maybe_cleanup_channel(channel_id):
 # ---------------------------------------------------------------------------
 
 async def start_relay(
-    host: str = "0.0.0.0",
+    host: str = "0.0.0.0",  # nosec B104
     port: int = 8765,
     secret: str = "",
     max_buffer: int = 1000,
@@ -513,7 +513,7 @@ def main():
         )
     )
     parser.add_argument(
-        "--host", default="0.0.0.0",
+        "--host", default="0.0.0.0",  # nosec B104
         help="Bind address (default: 0.0.0.0 = all interfaces)",
     )
     parser.add_argument(
