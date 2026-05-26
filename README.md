@@ -34,7 +34,7 @@ Both the compute node (producer) and your application (consumer) connect
 **outbound** to the relay. Neither side accepts an inbound connection — no firewall
 exceptions, no VPN, no tunnels required.
 
-![Relay architecture: both the HPC compute node and the application connect outbound to the WebSocket relay. The Control Plane handles job dispatch; the Data Plane carries incremental output back in real time.](Relay_Architecture.png)
+![Relay architecture: both the HPC compute node and the application connect outbound to the WebSocket relay. The Control Plane handles job dispatch; the Data Plane carries incremental output back in real time.](relay_architecture.png)
 
 ```
 Your application              Relay server              HPC compute node
