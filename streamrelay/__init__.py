@@ -37,7 +37,7 @@ from streamrelay.server import start_relay
 from streamrelay.crypto import encrypt_message, decrypt_message, generate_key
 from streamrelay.executor import StreamingExecutor
 
-__version__ = "0.1.1"
+__version__ = "0.3.0"
 __all__ = [
     "RelayProducer",
     "RelayConsumer",

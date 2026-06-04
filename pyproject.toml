@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "streamrelay"
-version = "0.2.0"
-description = "WebSocket relay for real-time incremental output from batch HPC executors"
+version = "0.3.0"
+description = "WebSocket relay for real-time incremental output from HPC executors — with lifecycle management"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 authors = [
     { name = "Anas Nassar", email = "nassar@uic.edu" },
 ]
-keywords = ["hpc", "globus-compute", "websocket", "streaming", "llm", "slurm"]
+keywords = ["hpc", "globus-compute", "websocket", "streaming", "llm", "slurm", "relay", "systemd"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -39,7 +39,10 @@ dev = [
 ]
 
 [project.scripts]
-streamrelay = "streamrelay.server:main"
+# streamrelay — main CLI (serve + lifecycle management)
+streamrelay = "streamrelay.cli:main"
+# streamrelay-server — direct server start, same as "streamrelay serve"
+streamrelay-server = "streamrelay.server:main"
 
 [project.urls]
 Homepage = "https://github.com/uicacer/streamrelay"
