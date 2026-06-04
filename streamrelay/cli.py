@@ -301,7 +301,7 @@ def main():
 
     # serve (mirrors server.py's argparse)
     p_serve = subparsers.add_parser("serve", help="Start the relay server (foreground)")
-    p_serve.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
+    p_serve.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")  # nosec B104
     p_serve.add_argument("--port", type=int, default=8765, help="Port (default: 8765)")
     p_serve.add_argument("--secret", default="", help="Shared auth secret (reads RELAY_SECRET env var)")
     p_serve.add_argument("--max-buffer", type=int, default=1000, dest="max_buffer")
