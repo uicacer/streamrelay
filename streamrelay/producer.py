@@ -107,6 +107,23 @@ class RelayProducer:
         """Build the /produce/{channel_id} URL."""
         return f"{self.relay_url}/produce/{self.channel_id}"
 
+    def _ssl_kwargs(self) -> dict:
+        """Return {'ssl': ctx} for wss:// URLs, empty dict for ws://.
+
+        HPC worker processes (e.g. Globus Compute on Lakeshore) can have a
+        custom PYTHONPATH that shadows the system SSL cert store, causing the
+        default TLS handshake to fail silently. An explicit context with the
+        system CA bundle fixes this without changing the security model.
+        """
+        if not self.relay_url.startswith("wss://"):
+            return {}
+        import ssl as _ssl
+        ctx = _ssl.create_default_context()
+        ctx.load_verify_locations(
+            _ssl.get_default_verify_paths().cafile or "/etc/pki/tls/cert.pem"
+        )
+        return {"ssl": ctx}
+
     def _encode(self, payload: dict) -> str:
         """
         Serialize a dict to JSON, then optionally encrypt it.
@@ -132,7 +149,7 @@ class RelayProducer:
         Called when entering a ``with RelayProducer(...) as relay:`` block.
         """
         from websockets.sync.client import connect as ws_connect
-        self._ws = ws_connect(self._produce_url())
+        self._ws = ws_connect(self._produce_url(), **self._ssl_kwargs())
         if self.relay_secret:
             self._ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
         logger.debug(f"[streamrelay] producer connected: channel={self.channel_id[:8]}")
@@ -167,7 +184,7 @@ class RelayProducer:
         """Explicitly open the synchronous WebSocket connection.
         Only needed if not using the context manager."""
         from websockets.sync.client import connect as ws_connect
-        self._ws = ws_connect(self._produce_url())
+        self._ws = ws_connect(self._produce_url(), **self._ssl_kwargs())
         if self.relay_secret:
             self._ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
         logger.debug(f"[streamrelay] producer connected: channel={self.channel_id[:8]}")
@@ -237,7 +254,7 @@ class RelayProducer:
         Used when your code already runs in an asyncio event loop.
         """
         from websockets.asyncio.client import connect as ws_connect
-        self._ws_cm = ws_connect(self._produce_url())
+        self._ws_cm = ws_connect(self._produce_url(), **self._ssl_kwargs())
         self._ws = await self._ws_cm.__aenter__()
         if self.relay_secret:
             await self._ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))

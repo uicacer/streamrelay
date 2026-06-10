@@ -89,6 +89,22 @@ class RelayConsumer:
         """Build the /consume/{channel_id} URL."""
         return f"{self.relay_url}/consume/{self.channel_id}"
 
+    def _ssl_kwargs(self) -> dict:
+        """Return {'ssl': ctx} for wss:// URLs, empty dict for ws://.
+
+        HPC worker processes can have a custom PYTHONPATH that shadows the
+        system SSL cert store, causing the default TLS handshake to fail
+        silently. An explicit context with the system CA bundle fixes this.
+        """
+        if not self.relay_url.startswith("wss://"):
+            return {}
+        import ssl as _ssl
+        ctx = _ssl.create_default_context()
+        ctx.load_verify_locations(
+            _ssl.get_default_verify_paths().cafile or "/etc/pki/tls/cert.pem"
+        )
+        return {"ssl": ctx}
+
     def _decrypt(self, msg_str: str) -> str:
         """
         Decrypt a message if encryption is configured; otherwise pass through.
@@ -153,7 +169,7 @@ class RelayConsumer:
         url = self._consume_url()
         logger.debug(f"[streamrelay] consumer connecting: channel={self.channel_id[:8]}")
 
-        with ws_connect(url) as ws:
+        with ws_connect(url, **self._ssl_kwargs()) as ws:
             if self.relay_secret:
                 ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
             for raw in ws:
@@ -209,7 +225,7 @@ class RelayConsumer:
         url = self._consume_url()
         logger.debug(f"[streamrelay] async consumer connecting: channel={self.channel_id[:8]}")
 
-        async with ws_connect(url) as ws:
+        async with ws_connect(url, **self._ssl_kwargs()) as ws:
             if self.relay_secret:
                 await ws.send(json.dumps({"type": "auth", "secret": self.relay_secret}))
             async for raw in ws:
