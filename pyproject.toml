@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "streamrelay"
-version = "0.3.0"
+version = "0.3.1"
 description = "WebSocket relay for real-time incremental output from HPC executors — with lifecycle management"
 readme = "README.md"
 license = { file = "LICENSE" }
