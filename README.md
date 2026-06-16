@@ -5,7 +5,6 @@
 [![PyPI](https://img.shields.io/pypi/v/streamrelay)](https://pypi.org/project/streamrelay/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/uicacer/streamrelay/blob/main/LICENSE)
 [![Tests](https://github.com/uicacer/streamrelay/actions/workflows/tests.yml/badge.svg)](https://github.com/uicacer/streamrelay/actions)
-[![JOSS](https://joss.theoj.org/papers/TODO/status.svg)](https://joss.theoj.org/papers/TODO)
 
 **New here? Start with the [full tutorial](https://github.com/uicacer/streamrelay/blob/main/docs/tutorial.md)** — deploy the relay,
 write a producer on your HPC node, stream output to your app, add encryption.
@@ -34,7 +33,7 @@ Both the compute node (producer) and your application (consumer) connect
 **outbound** to the relay. Neither side accepts an inbound connection — no firewall
 exceptions, no VPN, no tunnels required.
 
-![Relay architecture: both the HPC compute node and the application connect outbound to the WebSocket relay. The Control Plane handles job dispatch; the Data Plane carries incremental output back in real time.](relay_architecture.png)
+![Relay architecture: both the HPC compute node and the application connect outbound to the WebSocket relay. The Control Plane handles job dispatch; the Data Plane carries incremental output back in real time.](https://raw.githubusercontent.com/uicacer/streamrelay/main/relay_architecture.png)
 
 ```
 Your application              Relay server              HPC compute node
